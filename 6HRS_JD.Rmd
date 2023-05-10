@@ -1,0 +1,97 @@
+---
+title: "6HRS_JD"
+output: html_document
+date: "2023-05-10"
+---
+
+## Data Importing
+
+```{r setup, include=FALSE}
+library(tidyverse)
+indicator_1 <- read_csv("unicef_indicator_1.csv")
+indicator_2 <- read_csv("unicef_indicator_2.csv")
+metadata <- read_csv("unicef_metadata.csv")
+colnames(indicator_1) <- c("country", "alpha_2_code", "alpha_3_code", "numeric_code", "indicator", "time_period", "obs_value", "sex", "unit_multiplier", "unit_of_measure", "observation_status", "observation_confidentiality", "time_period_activity_related_to_when_the_data_are_collected", "current_age")
+colnames(indicator_2) <- c("country", "alpha_2_code", "alpha_3_code", "numeric_code", "indicator", "time_period", "obs_value", "sex", "unit_multiplier", "unit_of_measure", "observation_status", "observation_confidentiality", "time_period_activity_related_to_when_the_data_are_collected", "current_age")
+names(indicator_1)[names(indicator_1) == "time_period"] <- "year"
+
+merged_data <- left_join(indicator_1, metadata, by = c("country", "year"))
+
+filtered_data <- merged_data %>%
+  filter(!is.na(`GDP per capita (constant 2015 US$)`), !is.na(obs_value)) %>%
+  select(country, year, obs_value, `GDP per capita (constant 2015 US$)`)
+
+```
+
+## World Map chart
+
+```{r V1}
+
+library(ggplot2)
+
+# Load world map data
+world_map_data <- map_data("world")
+
+# Create world map visualization
+world_map <- ggplot(filtered_data, aes(fill = obs_value, map_id = country)) +
+  geom_map(map = world_map_data, aes(fill = obs_value, map_id = country), color = "white") +
+  expand_limits(x = world_map_data$long, y = world_map_data$lat) +
+  coord_map() +
+  scale_fill_viridis_c(option = "magma", name = "Percentage of Children") +
+  theme_void()
+
+print(world_map)
+
+```
+
+##  Bar Chart
+
+```{r V2}
+
+library(ggplot2)
+
+# Create bar chart
+bar_chart <- ggplot(filtered_data, aes(x = country, y = obs_value)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Country", y = "Observation Value", title = "Observation Value by Country") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 0.5))
+
+# Display the bar chart
+bar_chart
+
+```
+
+##  Scatterplot with a linear regression line
+
+
+```{r V3}
+
+scatterplot <- ggplot(filtered_data, aes(x = `GDP per capita (constant 2015 US$)`, y = obs_value)) +
+  geom_point(color = "#6C8EBF") +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  labs(x = "GDP per Capita (constant 2015 US$)", y = "Percentage of Children Suffering from Deprivation") +
+  theme_minimal()
+print(scatterplot)
+
+```
+##  Time-series chart
+
+```{r V4}
+
+library(ggplot2)
+library(dplyr)
+
+average_gdp <- filtered_data %>%
+  group_by(year) %>%
+  summarize(avg_gdp = mean(`GDP per capita (constant 2015 US$)`))
+
+time_series_chart <- ggplot(average_gdp, aes(x = year, y = avg_gdp)) +
+  geom_line() +
+  labs(x = "Year", y = "Average GDP per capita (constant 2015 US$)", title = "Average GDP per Capita Over Time") +
+  theme_minimal()
+
+time_series_chart
+
+```
+
